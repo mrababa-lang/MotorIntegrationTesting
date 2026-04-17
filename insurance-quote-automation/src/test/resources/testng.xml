@@ -18,4 +18,10 @@
       <class name="com.insurance.automation.runners.TestRunner"/>
     </classes>
   </test>
+  <test name="Motor Tests">
+    <parameter name="cucumber.filter.tags" value="@motor"/>
+    <classes>
+      <class name="com.insurance.automation.runners.TestRunner"/>
+    </classes>
+  </test>
 </suite>

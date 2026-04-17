@@ -46,6 +46,7 @@ public class TestRunner extends AbstractTestNGCucumberTests {
                 .build(),
             config.reportTemplatePath(),
             config.reportOutputDir());
+        addShoryMotorConfigurations();
         LOG.info("Initialized report generator for build={} env={}", buildId, System.getProperty("env", "uat"));
     }
 
@@ -73,5 +74,30 @@ public class TestRunner extends AbstractTestNGCucumberTests {
      */
     public static InsuranceQuoteReportGenerator getReporter() {
         return reporter;
+    }
+
+    private void addShoryMotorConfigurations() {
+        reporter.addConfiguration(configuration("vehicleIdentity_plate", "Plate-Based Lookup (vehicleIdentity=2)", "Vehicle Lookup", "vehicleIdentity=2"));
+        reporter.addConfiguration(configuration("vehicleIdentity_vcc", "VCC-Based Lookup (vehicleIdentity=3)", "Vehicle Lookup", "vehicleIdentity=3"));
+        reporter.addConfiguration(configuration("customLangHeader", "Custom Language Header (AR)", "Request Config", "custom-lang: AR"));
+        reporter.addConfiguration(configuration("quoteOfferPolling", "Quote Offer Polling", "Quote Flow", "max=10, interval=3000ms"));
+        reporter.addConfiguration(configuration("nullLicenseHandling", "Null CustomerLicenseId Handling", "Quote Flow", "omit field if null"));
+        reporter.addConfiguration(configuration("offerFeatureCode_tpl", "Third Party Liability Feature (code=1)", "Offer Features", "code=1"));
+        reporter.addConfiguration(configuration("offerFeatureCode_carRental", "Car Rental Feature (code=3)", "Offer Features", "code=3"));
+        reporter.addConfiguration(configuration("offerFeatureCode_roadside", "Roadside Assistance Feature (code=4)", "Offer Features", "code=4"));
+    }
+
+    private InsuranceQuoteReportGenerator.ConfigurationResult configuration(
+        final String key,
+        final String label,
+        final String category,
+        final String value) {
+        return InsuranceQuoteReportGenerator.ConfigurationResult.builder()
+            .key(key)
+            .label(label)
+            .category(category)
+            .enabled(Boolean.TRUE)
+            .value(value)
+            .build();
     }
 }

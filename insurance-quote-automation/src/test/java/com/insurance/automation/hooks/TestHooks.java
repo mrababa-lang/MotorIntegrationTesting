@@ -54,6 +54,12 @@ public class TestHooks {
         scenarioContext.setLastHttpStatus(0);
         scenarioContext.setLastExpectedStatement(null);
         scenarioContext.setRawLastResponse(null);
+        scenarioContext.setLastApiResponse(null);
+        scenarioContext.setVehicleId(null);
+        scenarioContext.setCustomerId(null);
+        scenarioContext.setCustomerLicenseId(null);
+        scenarioContext.setQuoteRequestId(null);
+        scenarioContext.setOfferIds(new ArrayList<>());
         LOG.info("Starting scenario '{}' on env '{}'", scenario.getName(), System.getProperty("env", "uat"));
     }
 
