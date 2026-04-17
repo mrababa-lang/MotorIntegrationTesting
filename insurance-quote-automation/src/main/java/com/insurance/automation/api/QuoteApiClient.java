@@ -9,10 +9,11 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.HttpClientConfig;
 import io.restassured.config.LogConfig;
 import io.restassured.config.RestAssuredConfig;
+import io.restassured.filter.log.RequestLoggingFilter;
+import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import java.io.PrintStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,16 +24,17 @@ public class QuoteApiClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(QuoteApiClient.class);
 
-    private final EnvironmentConfig config;
+    private final RequestSpecification requestSpecification;
     private long lastResponseTime;
     private int lastHttpStatusCode;
     private String lastRawResponse;
 
     /**
-     * Creates a quote API client.
+     * Creates a quote API client and initializes the reusable REST Assured request specification.
      */
     public QuoteApiClient() {
-        this.config = ConfigManager.getConfig();
+        final EnvironmentConfig config = ConfigManager.getConfig();
+        this.requestSpecification = buildRequestSpec(config);
     }
 
     /**
@@ -42,13 +44,14 @@ public class QuoteApiClient {
      * @return mapped quote response.
      */
     public QuoteResponse getQuote(final QuoteRequest request) {
-        final RequestSpecification specification = buildRequestSpec();
-        final Response response = RestAssured.given(specification)
+        final Response response = RestAssured.given(requestSpecification)
             .body(request)
             .post();
+
         lastResponseTime = response.time();
         lastHttpStatusCode = response.statusCode();
         lastRawResponse = response.asString();
+
         LOG.info("Quote API call completed with status={} and duration={}ms", lastHttpStatusCode, lastResponseTime);
         return response.as(QuoteResponse.class);
     }
@@ -80,25 +83,24 @@ public class QuoteApiClient {
         return lastRawResponse;
     }
 
-    private RequestSpecification buildRequestSpec() {
-        final boolean debugEnabled = LOG.isDebugEnabled();
-        final RestAssuredConfig raConfig = RestAssuredConfig.config()
+    private RequestSpecification buildRequestSpec(final EnvironmentConfig config) {
+        final RestAssuredConfig restAssuredConfig = RestAssuredConfig.config()
             .httpClient(HttpClientConfig.httpClientConfig()
                 .setParam("http.connection.timeout", config.connectTimeoutMs())
                 .setParam("http.socket.timeout", config.readTimeoutMs()))
-            .logConfig(LogConfig.logConfig().enableLoggingOfRequestAndResponseIfValidationFails(LogDetail.ALL));
+            .logConfig(LogConfig.logConfig());
 
         final RequestSpecBuilder builder = new RequestSpecBuilder()
-            .setConfig(raConfig)
+            .setConfig(restAssuredConfig)
             .setBaseUri(config.baseUrl())
             .setBasePath(config.quoteEndpoint())
             .setContentType("application/json")
             .addHeader("X-Api-Key", config.apiKey())
             .addHeader("X-Client-Id", config.clientId());
 
-        if (debugEnabled) {
-            builder.log(LogDetail.ALL);
-            builder.setConfig(raConfig.logConfig(LogConfig.logConfig().defaultStream(new PrintStream(System.err))));
+        if (LOG.isDebugEnabled()) {
+            builder.addFilter(new RequestLoggingFilter(LogDetail.ALL));
+            builder.addFilter(new ResponseLoggingFilter(LogDetail.ALL));
         }
 
         return builder.build();
