@@ -3,6 +3,10 @@ package com.insurance.automation.context;
 import com.insurance.automation.models.request.QuoteRequest;
 import com.insurance.automation.models.response.ConfigStatusResponse;
 import com.insurance.automation.models.response.QuoteResponse;
+import io.restassured.response.Response;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.Data;
 
 /**
@@ -20,4 +24,15 @@ public class ScenarioContext {
     private String currentScenarioId;
     private String lastExpectedStatement;
     private String rawLastResponse;
+
+    private Response lastApiResponse;
+    private String vehicleId;
+    private String customerId;
+    private String customerLicenseId = null;
+    private String quoteRequestId;
+    private List<String> offerIds = new ArrayList<>();
+
+    public Optional<String> getCustomerLicenseId() {
+        return Optional.ofNullable(customerLicenseId);
+    }
 }
