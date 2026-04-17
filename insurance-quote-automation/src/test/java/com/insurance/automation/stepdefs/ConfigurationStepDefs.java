@@ -48,6 +48,7 @@ public class ConfigurationStepDefs {
     @Then("the configuration enabled state is {word}")
     public void verifyEnabledState(final String expected) {
         assertThat(scenarioContext.getLastConfigResponse().getEnabled()).isEqualTo(Boolean.parseBoolean(expected));
+        scenarioContext.setLastExpectedStatement("configuration enabled state is " + expected);
     }
 
     /**
