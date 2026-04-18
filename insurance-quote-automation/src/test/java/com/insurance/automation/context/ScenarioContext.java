@@ -1,6 +1,5 @@
 package com.insurance.automation.context;
 
-import com.insurance.automation.helpers.ConfigurationTestHelper;
 import com.insurance.automation.models.request.QuoteRequest;
 import com.insurance.automation.models.response.ConfigStatusResponse;
 import com.insurance.automation.models.response.QuoteResponse;
@@ -23,7 +22,6 @@ public class ScenarioContext {
     private String currentScenarioId;
     private String lastExpectedStatement;
     private String rawLastResponse;
-    private ConfigurationTestHelper.ConfigResult lastConfigResult;
     private String lastConfigError;
 
     private Response lastApiResponse;
@@ -103,14 +101,6 @@ public class ScenarioContext {
 
     public void setRawLastResponse(final String rawLastResponse) {
         this.rawLastResponse = rawLastResponse;
-    }
-
-    public ConfigurationTestHelper.ConfigResult getLastConfigResult() {
-        return lastConfigResult;
-    }
-
-    public void setLastConfigResult(final ConfigurationTestHelper.ConfigResult lastConfigResult) {
-        this.lastConfigResult = lastConfigResult;
     }
 
     public String getLastConfigError() {
