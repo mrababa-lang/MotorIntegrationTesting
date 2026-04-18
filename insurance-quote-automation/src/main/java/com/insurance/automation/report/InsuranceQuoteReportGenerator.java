@@ -1,6 +1,8 @@
 package com.insurance.automation.report;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
@@ -46,7 +48,8 @@ public class InsuranceQuoteReportGenerator {
         this.outputDir = outputDir;
         this.objectMapper = new ObjectMapper()
             .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
     }
 
     /**
