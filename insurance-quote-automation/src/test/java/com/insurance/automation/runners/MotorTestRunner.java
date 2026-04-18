@@ -6,9 +6,9 @@ import io.cucumber.testng.CucumberOptions;
  * Executes end-to-end motor regression scenarios.
  */
 @CucumberOptions(
-    features = "src/test/resources/features",
+    features = "src/test/resources/features/motor",
     glue = {"com.insurance.automation.stepdefs", "com.insurance.automation.hooks"},
-    tags = "@Regression and @motor",
+    tags = "@motor",
     plugin = {
         "pretty",
         "html:target/cucumber-reports/report.html",
