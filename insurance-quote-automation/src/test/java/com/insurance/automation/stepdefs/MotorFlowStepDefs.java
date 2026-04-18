@@ -111,7 +111,7 @@ public class MotorFlowStepDefs extends BaseApiClient {
 
     @And("the response field {string} should be null")
     public void responseFieldNull(final String jsonPath) {
-        assertThat(context.getLastApiResponse().jsonPath().get(jsonPath)).isNull();
+        assertThat((Object) context.getLastApiResponse().jsonPath().get(jsonPath)).isNull();
     }
 
     @And("the response field {string} should be {int}")

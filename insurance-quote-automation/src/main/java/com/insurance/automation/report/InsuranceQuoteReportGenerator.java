@@ -117,6 +117,13 @@ public class InsuranceQuoteReportGenerator {
         private String startedAt;
         private String baseUrl;
 
+        public RunInfo(final String environment, final String buildId, final String startedAt, final String baseUrl) {
+            this.environment = environment;
+            this.buildId = buildId;
+            this.startedAt = startedAt;
+            this.baseUrl = baseUrl;
+        }
+
         public static RunInfoBuilder builder() {
             return new RunInfoBuilder();
         }
@@ -182,6 +189,25 @@ public class InsuranceQuoteReportGenerator {
         private List<ConfigValue> configValues;
         private String error;
 
+        public TestResult(final String id, final String name, final String description, final String category,
+                final String status, final Long duration, final String input, final String expected,
+                final String actual, final Boolean match, final List<SkipRule> skipRules,
+                final List<ConfigValue> configValues, final String error) {
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.category = category;
+            this.status = status;
+            this.duration = duration;
+            this.input = input;
+            this.expected = expected;
+            this.actual = actual;
+            this.match = match;
+            this.skipRules = skipRules;
+            this.configValues = configValues;
+            this.error = error;
+        }
+
         public static TestResultBuilder builder() {
             return new TestResultBuilder();
         }
@@ -231,6 +257,11 @@ public class InsuranceQuoteReportGenerator {
         private String code;
         private String message;
 
+        public SkipRule(final String code, final String message) {
+            this.code = code;
+            this.message = message;
+        }
+
         public static SkipRuleBuilder builder() {
             return new SkipRuleBuilder();
         }
@@ -264,6 +295,11 @@ public class InsuranceQuoteReportGenerator {
     public static class ConfigValue {
         private String key;
         private String value;
+
+        public ConfigValue(final String key, final String value) {
+            this.key = key;
+            this.value = value;
+        }
 
         public static ConfigValueBuilder builder() {
             return new ConfigValueBuilder();
@@ -302,6 +338,16 @@ public class InsuranceQuoteReportGenerator {
         private Boolean enabled;
         private String value;
         private String lastUpdated;
+
+        public ConfigurationResult(final String category, final String key, final String label,
+                final Boolean enabled, final String value, final String lastUpdated) {
+            this.category = category;
+            this.key = key;
+            this.label = label;
+            this.enabled = enabled;
+            this.value = value;
+            this.lastUpdated = lastUpdated;
+        }
 
         public static ConfigurationResultBuilder builder() {
             return new ConfigurationResultBuilder();
