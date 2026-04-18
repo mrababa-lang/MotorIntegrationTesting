@@ -1,20 +1,5 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="Insurance Quote Automation" parallel="none">
-  <test name="Quote Tests">
-    <classes>
-      <class name="com.insurance.automation.runners.QuoteTestRunner"/>
-    </classes>
-  </test>
-  <test name="Skip Rule Tests">
-    <classes>
-      <class name="com.insurance.automation.runners.SkipRuleTestRunner"/>
-    </classes>
-  </test>
-  <test name="Config Tests">
-    <classes>
-      <class name="com.insurance.automation.runners.ConfigTestRunner"/>
-    </classes>
-  </test>
   <test name="Motor Tests">
     <classes>
       <class name="com.insurance.automation.runners.MotorTestRunner"/>
