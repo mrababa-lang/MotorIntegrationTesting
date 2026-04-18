@@ -1,6 +1,6 @@
 package com.insurance.automation.stepdefs;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.insurance.automation.api.BaseApiClient;
 import com.insurance.automation.api.ShoryEndpoints;

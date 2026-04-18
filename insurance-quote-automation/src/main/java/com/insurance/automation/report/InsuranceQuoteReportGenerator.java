@@ -13,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.slf4j.Logger;
@@ -110,7 +109,6 @@ public class InsuranceQuoteReportGenerator {
      * Run metadata model.
      */
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RunInfo {
@@ -119,6 +117,10 @@ public class InsuranceQuoteReportGenerator {
         private String startedAt;
         private String baseUrl;
 
+        public static RunInfoBuilder builder() {
+            return new RunInfoBuilder();
+        }
+
         public String getEnvironment() {
             return environment;
         }
@@ -126,13 +128,43 @@ public class InsuranceQuoteReportGenerator {
         public String getBuildId() {
             return buildId;
         }
+
+        public static class RunInfoBuilder {
+            private String environment;
+            private String buildId;
+            private String startedAt;
+            private String baseUrl;
+
+            public RunInfoBuilder environment(final String environment) {
+                this.environment = environment;
+                return this;
+            }
+
+            public RunInfoBuilder buildId(final String buildId) {
+                this.buildId = buildId;
+                return this;
+            }
+
+            public RunInfoBuilder startedAt(final String startedAt) {
+                this.startedAt = startedAt;
+                return this;
+            }
+
+            public RunInfoBuilder baseUrl(final String baseUrl) {
+                this.baseUrl = baseUrl;
+                return this;
+            }
+
+            public RunInfo build() {
+                return new RunInfo(environment, buildId, startedAt, baseUrl);
+            }
+        }
     }
 
     /**
      * Test scenario result model.
      */
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TestResult {
@@ -149,37 +181,118 @@ public class InsuranceQuoteReportGenerator {
         private List<SkipRule> skipRules;
         private List<ConfigValue> configValues;
         private String error;
+
+        public static TestResultBuilder builder() {
+            return new TestResultBuilder();
+        }
+
+        public static class TestResultBuilder {
+            private String id;
+            private String name;
+            private String description;
+            private String category;
+            private String status;
+            private Long duration;
+            private String input;
+            private String expected;
+            private String actual;
+            private Boolean match;
+            private List<SkipRule> skipRules;
+            private List<ConfigValue> configValues;
+            private String error;
+
+            public TestResultBuilder id(final String id) { this.id = id; return this; }
+            public TestResultBuilder name(final String name) { this.name = name; return this; }
+            public TestResultBuilder description(final String description) { this.description = description; return this; }
+            public TestResultBuilder category(final String category) { this.category = category; return this; }
+            public TestResultBuilder status(final String status) { this.status = status; return this; }
+            public TestResultBuilder duration(final Long duration) { this.duration = duration; return this; }
+            public TestResultBuilder input(final String input) { this.input = input; return this; }
+            public TestResultBuilder expected(final String expected) { this.expected = expected; return this; }
+            public TestResultBuilder actual(final String actual) { this.actual = actual; return this; }
+            public TestResultBuilder match(final Boolean match) { this.match = match; return this; }
+            public TestResultBuilder skipRules(final List<SkipRule> skipRules) { this.skipRules = skipRules; return this; }
+            public TestResultBuilder configValues(final List<ConfigValue> configValues) { this.configValues = configValues; return this; }
+            public TestResultBuilder error(final String error) { this.error = error; return this; }
+
+            public TestResult build() {
+                return new TestResult(id, name, description, category, status, duration, input, expected, actual, match, skipRules, configValues, error);
+            }
+        }
     }
 
     /**
      * Skip rule detail for report rendering.
      */
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SkipRule {
         private String code;
         private String message;
+
+        public static SkipRuleBuilder builder() {
+            return new SkipRuleBuilder();
+        }
+
+        public static class SkipRuleBuilder {
+            private String code;
+            private String message;
+
+            public SkipRuleBuilder code(final String code) {
+                this.code = code;
+                return this;
+            }
+
+            public SkipRuleBuilder message(final String message) {
+                this.message = message;
+                return this;
+            }
+
+            public SkipRule build() {
+                return new SkipRule(code, message);
+            }
+        }
     }
 
     /**
      * Configuration value detail for report rendering.
      */
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ConfigValue {
         private String key;
         private String value;
+
+        public static ConfigValueBuilder builder() {
+            return new ConfigValueBuilder();
+        }
+
+        public static class ConfigValueBuilder {
+            private String key;
+            private String value;
+
+            public ConfigValueBuilder key(final String key) {
+                this.key = key;
+                return this;
+            }
+
+            public ConfigValueBuilder value(final String value) {
+                this.value = value;
+                return this;
+            }
+
+            public ConfigValue build() {
+                return new ConfigValue(key, value);
+            }
+        }
     }
 
     /**
      * Configuration card model for report rendering.
      */
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ConfigurationResult {
@@ -189,5 +302,29 @@ public class InsuranceQuoteReportGenerator {
         private Boolean enabled;
         private String value;
         private String lastUpdated;
+
+        public static ConfigurationResultBuilder builder() {
+            return new ConfigurationResultBuilder();
+        }
+
+        public static class ConfigurationResultBuilder {
+            private String category;
+            private String key;
+            private String label;
+            private Boolean enabled;
+            private String value;
+            private String lastUpdated;
+
+            public ConfigurationResultBuilder category(final String category) { this.category = category; return this; }
+            public ConfigurationResultBuilder key(final String key) { this.key = key; return this; }
+            public ConfigurationResultBuilder label(final String label) { this.label = label; return this; }
+            public ConfigurationResultBuilder enabled(final Boolean enabled) { this.enabled = enabled; return this; }
+            public ConfigurationResultBuilder value(final String value) { this.value = value; return this; }
+            public ConfigurationResultBuilder lastUpdated(final String lastUpdated) { this.lastUpdated = lastUpdated; return this; }
+
+            public ConfigurationResult build() {
+                return new ConfigurationResult(category, key, label, enabled, value, lastUpdated);
+            }
+        }
     }
 }
