@@ -2,14 +2,14 @@ package com.insurance.automation.stepdefs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insurance.automation.api.BaseApiClient;
 import com.insurance.automation.api.ShoryEndpoints;
 import com.insurance.automation.builders.QuoteRequestBuilder;
 import com.insurance.automation.config.ConfigManager;
 import com.insurance.automation.config.EnvironmentConfig;
 import com.insurance.automation.context.ScenarioContext;
-import com.insurance.automation.report.InsuranceQuoteReportGenerator;
-import com.insurance.automation.runners.TestRunner;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
@@ -28,32 +28,25 @@ import java.util.Map;
 public class MotorFlowStepDefs extends BaseApiClient {
 
     private final ScenarioContext context;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MotorFlowStepDefs(final ScenarioContext context) {
         this.context = context;
     }
 
-    @Given("the UAT environment is configured with base URL {string}")
-    public void verifyUatBaseUrl(final String expectedBaseUrl) {
-        assertThat(config.baseUrl()).isEqualTo(expectedBaseUrl);
-    }
-
-    @And("the request header {string} is set to {string}")
-    public void verifyHeader(final String header, final String expectedValue) {
-        if ("custom-lang".equalsIgnoreCase(header)) {
-            assertThat(config.defaultHeaderCustomLang()).isEqualTo(expectedValue);
-        }
-    }
+    // ── POST steps ───────────────────────────────────────────────────────────
 
     @When("I POST to {string} with body:")
     public void postWithBodyTable(final String path, final DataTable dataTable) {
         final Map<String, String> values = dataTable.asMap(String.class, String.class);
         final Map<String, Object> payload = toNestedPayload(values);
+        captureBody(payload);
         setLastResponse(buildSpec().body(payload).post(path));
     }
 
     @Given("I POST to {string} with payload:")
     public void givenPostWithPayload(final String path, final String payload) {
+        context.setLastRequestBodyJson(payload.trim());
         setLastResponse(buildSpec().body(payload).post(path));
     }
 
@@ -71,14 +64,18 @@ public class MotorFlowStepDefs extends BaseApiClient {
                 }
             }
         }
+        captureBody(body);
         setLastResponse(buildSpec().body(body).post(path));
     }
 
     @When("I POST to {string} omitting the customerLicenseId field")
     public void postQuoteRequestWithoutLicense(final String path) {
         final Map<String, Object> body = QuoteRequestBuilder.fromContext(context);
+        captureBody(body);
         setLastResponse(buildSpec().body(body).post(path));
     }
+
+    // ── GET / poll steps ─────────────────────────────────────────────────────
 
     @When("I GET {string} with param {string} from context")
     public void getWithContextParam(final String path, final String param) {
@@ -99,34 +96,58 @@ public class MotorFlowStepDefs extends BaseApiClient {
         setLastResponse(latest);
     }
 
+    // ── Assertion steps (each logs itself to the step log) ───────────────────
+
     @Then("the response status code should be {int}")
     public void verifyStatusCode(final int expected) {
+        context.appendStep("HTTP status = " + expected);
         assertThat(context.getLastApiResponse().statusCode()).isEqualTo(expected);
     }
 
     @And("the response field {string} should be true")
     public void responseFieldTrue(final String jsonPath) {
+        context.appendStep(jsonPath + " = true");
         assertThat(context.getLastApiResponse().jsonPath().getBoolean(jsonPath)).isTrue();
     }
 
     @And("the response field {string} should be null")
     public void responseFieldNull(final String jsonPath) {
+        context.appendStep(jsonPath + " = null");
         assertThat((Object) context.getLastApiResponse().jsonPath().get(jsonPath)).isNull();
     }
 
     @And("the response field {string} should be {int}")
     public void responseFieldInt(final String jsonPath, final int value) {
+        context.appendStep(jsonPath + " = " + value);
         assertThat(context.getLastApiResponse().jsonPath().getInt(jsonPath)).isEqualTo(value);
     }
 
     @And("the response field {string} should be {string}")
     public void responseFieldString(final String jsonPath, final String value) {
+        context.appendStep(jsonPath + " = \"" + value + "\"");
         assertThat(context.getLastApiResponse().jsonPath().getString(jsonPath)).isEqualTo(value);
     }
 
     @And("the response field {string} should start with {string}")
     public void responseFieldStartsWith(final String jsonPath, final String prefix) {
+        context.appendStep(jsonPath + " starts with \"" + prefix + "\"");
         assertThat(context.getLastApiResponse().jsonPath().getString(jsonPath)).startsWith(prefix);
+    }
+
+    // ── Context capture steps ─────────────────────────────────────────────────
+
+    @Given("the UAT environment is configured with base URL {string}")
+    public void verifyUatBaseUrl(final String expectedBaseUrl) {
+        context.appendStep("Base URL = " + expectedBaseUrl);
+        assertThat(config.baseUrl()).isEqualTo(expectedBaseUrl);
+    }
+
+    @And("the request header {string} is set to {string}")
+    public void verifyHeader(final String header, final String expectedValue) {
+        context.appendStep("Header " + header + " = " + expectedValue);
+        if ("custom-lang".equalsIgnoreCase(header)) {
+            assertThat(config.defaultHeaderCustomLang()).isEqualTo(expectedValue);
+        }
     }
 
     @And("the VehicleId, CustomerId, and CustomerLicenseId are stored in context")
@@ -135,6 +156,13 @@ public class MotorFlowStepDefs extends BaseApiClient {
         context.setVehicleId(jp.getString("details.vehicle[0].id"));
         context.setCustomerId(jp.getString("details.customerId"));
         context.setCustomerLicenseId(jp.getString("details.customerLicenseId"));
+        // Capture key response fields for the Config Values column
+        captureResponseField(jp, "customerId",         "details.customerId");
+        captureResponseField(jp, "customerLicenseId",  "details.customerLicenseId");
+        captureResponseField(jp, "vehicleId",          "details.vehicle[0].id");
+        captureResponseField(jp, "vehicleMake",        "details.vehicle[0].makeAlias");
+        captureResponseField(jp, "vehicleModel",       "details.vehicle[0].model");
+        captureResponseField(jp, "vehicleYear",        "details.vehicle[0].modelYear");
     }
 
     @And("the VehicleId and CustomerId are stored in context")
@@ -142,23 +170,31 @@ public class MotorFlowStepDefs extends BaseApiClient {
         final JsonPath jp = context.getLastApiResponse().jsonPath();
         context.setVehicleId(jp.getString("details.vehicle[0].id"));
         context.setCustomerId(jp.getString("details.customerId"));
+        captureResponseField(jp, "customerId",  "details.customerId");
+        captureResponseField(jp, "vehicleId",   "details.vehicle[0].id");
+        captureResponseField(jp, "vehicleMake", "details.vehicle[0].makeAlias");
     }
 
     @And("CustomerLicenseId is stored as null in context")
     public void storeNullLicenseId() {
         context.setCustomerLicenseId(null);
+        context.addCapturedConfigValue("customerLicenseId", "null (omitted)");
     }
 
     @And("the quoteRequestId is stored in context")
     @And("QuoteRequestId is captured")
     public void storeQuoteRequestId() {
-        context.setQuoteRequestId(context.getLastApiResponse().jsonPath().getString("details.quoteRequestId"));
+        final String qrId = context.getLastApiResponse().jsonPath().getString("details.quoteRequestId");
+        context.setQuoteRequestId(qrId);
+        context.addCapturedConfigValue("quoteRequestId", qrId != null ? qrId : "null");
     }
 
     @Given("a vehicle has been successfully retrieved and IDs are in context")
     public void ensureVehicleIdsReady() {
         if (context.getVehicleId() == null || context.getCustomerId() == null) {
-            setLastResponse(buildSpec().body(defaultPlatePayload()).post(ShoryEndpoints.VEHICLE_RETRIEVE));
+            final Map<String, Object> plate = defaultPlatePayload();
+            captureBody(plate);
+            setLastResponse(buildSpec().body(plate).post(ShoryEndpoints.VEHICLE_RETRIEVE));
             storeAllVehicleContextValues();
         }
     }
@@ -172,7 +208,9 @@ public class MotorFlowStepDefs extends BaseApiClient {
     public void ensureQuoteRequestReady() {
         ensureVehicleIdsReady();
         if (context.getQuoteRequestId() == null) {
-            setLastResponse(buildSpec().body(QuoteRequestBuilder.fromContext(context)).post(ShoryEndpoints.QUOTE_REQUEST));
+            final Map<String, Object> body = QuoteRequestBuilder.fromContext(context);
+            captureBody(body);
+            setLastResponse(buildSpec().body(body).post(ShoryEndpoints.QUOTE_REQUEST));
             storeQuoteRequestId();
         }
     }
@@ -189,6 +227,7 @@ public class MotorFlowStepDefs extends BaseApiClient {
     @And("the offers list is non-empty")
     public void offersListNonEmpty() {
         final List<Map<String, Object>> offers = context.getLastApiResponse().jsonPath().getList("details.offers");
+        context.appendStep("offers list is non-empty");
         assertThat(offers).isNotNull().isNotEmpty();
     }
 
@@ -197,6 +236,7 @@ public class MotorFlowStepDefs extends BaseApiClient {
     public void storeAllOfferIds() {
         final List<String> ids = context.getLastApiResponse().jsonPath().getList("details.offers.id");
         context.setOfferIds(ids == null ? new ArrayList<>() : ids);
+        context.addCapturedConfigValue("offerCount", String.valueOf(context.getOfferIds().size()));
         assertThat(context.getOfferIds()).isNotEmpty();
     }
 
@@ -209,11 +249,13 @@ public class MotorFlowStepDefs extends BaseApiClient {
     @And("the offer features list is non-empty")
     public void verifyOfferFeaturesNotEmpty() {
         final List<Map<String, Object>> features = context.getLastApiResponse().jsonPath().getList("details.features");
+        context.appendStep("offer features list is non-empty");
         assertThat(features).isNotNull().isNotEmpty();
     }
 
     @And("feature code {int} corresponds to {string}")
     public void verifyFeatureCodeMapping(final int code, final String label) {
+        context.appendStep("feature code " + code + " = \"" + label + "\"");
         final List<Map<String, Object>> features = context.getLastApiResponse().jsonPath().getList("details.features");
         assertThat(features).anySatisfy(feature -> {
             assertThat(((Number) feature.get("code")).intValue()).isEqualTo(code);
@@ -223,6 +265,7 @@ public class MotorFlowStepDefs extends BaseApiClient {
 
     @And("the vehicle make is {string} and model is {string}")
     public void verifyVehicleMakeModel(final String make, final String model) {
+        context.appendStep("vehicle make = \"" + make + "\", model = \"" + model + "\"");
         responseFieldString("details.vehicle[0].make", make);
         responseFieldString("details.vehicle[0].model", model);
     }
@@ -235,6 +278,7 @@ public class MotorFlowStepDefs extends BaseApiClient {
     @When("I POST to {string} using captured VehicleId and CustomerId")
     public void postUsingCapturedVehicleAndCustomer(final String path) {
         final Map<String, Object> body = QuoteRequestBuilder.fromContext(context);
+        captureBody(body);
         setLastResponse(buildSpec().body(body).post(path));
     }
 
@@ -270,42 +314,28 @@ public class MotorFlowStepDefs extends BaseApiClient {
         verifyFeatureCodeMapping(4, "Roadside Assistance");
     }
 
-    @And("the test result is recorded in the report generator")
-    public void recordConfigSetInReport() {
-        final InsuranceQuoteReportGenerator reporter = TestRunner.getReporter();
-        reporter.addConfiguration(InsuranceQuoteReportGenerator.ConfigurationResult.builder()
-            .category("Vehicle Lookup")
-            .key("vehicleIdentity_plate")
-            .label("Plate-Based Lookup (vehicleIdentity=2)")
-            .enabled(Boolean.TRUE)
-            .value("vehicleIdentity=2")
-            .build());
-        reporter.addConfiguration(InsuranceQuoteReportGenerator.ConfigurationResult.builder()
-            .category("Vehicle Lookup")
-            .key("vehicleIdentity_vcc")
-            .label("VCC-Based Lookup (vehicleIdentity=3)")
-            .enabled(Boolean.TRUE)
-            .value("vehicleIdentity=3")
-            .build());
-        reporter.addConfiguration(InsuranceQuoteReportGenerator.ConfigurationResult.builder()
-            .category("Request Config")
-            .key("customLangHeader")
-            .label("Custom Language Header (AR)")
-            .enabled(Boolean.TRUE)
-            .value("custom-lang: AR")
-            .build());
-        reporter.addConfiguration(InsuranceQuoteReportGenerator.ConfigurationResult.builder()
-            .category("Quote Flow")
-            .key("quoteOfferPolling")
-            .label("Quote Offer Polling")
-            .enabled(Boolean.TRUE)
-            .value("max=10, interval=3000ms")
-            .build());
-    }
-
     @And("Until the response indicates offers are ready \\(max {int} attempts, {int}ms interval\\)")
     public void untilReady(final int attempts, final int interval) throws InterruptedException {
         pollUntilReady(interval, attempts, "isReady");
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /** Serializes a request body map to JSON and stores it in the context for the report. */
+    private void captureBody(final Object body) {
+        try {
+            context.setLastRequestBodyJson(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(body));
+        } catch (JsonProcessingException e) {
+            context.setLastRequestBodyJson("{}");
+        }
+    }
+
+    /** Extracts a single JSON path value from a response and adds it to captured config values. */
+    private void captureResponseField(final JsonPath jp, final String label, final String path) {
+        final Object val = jp.get(path);
+        if (val != null) {
+            context.addCapturedConfigValue(label, String.valueOf(val));
+        }
     }
 
     private Object resolveContextValue(final String key) {
@@ -337,16 +367,10 @@ public class MotorFlowStepDefs extends BaseApiClient {
     }
 
     private Object parseValue(final String rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
+        if (rawValue == null) return null;
         final String value = rawValue.trim();
         if (value.matches("^-?\\d+$")) {
-            try {
-                return Long.parseLong(value);
-            } catch (NumberFormatException exception) {
-                return value;
-            }
+            try { return Long.parseLong(value); } catch (NumberFormatException e) { return value; }
         }
         return value;
     }

@@ -1,8 +1,41 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="Insurance Quote Automation" parallel="none">
+
+  <!--
+    Set insuranceCompanyProfileId to the company you want to test.
+    This ID is included in every quote request and shown in the HTML report header.
+
+    Known IDs:
+      1  = Islamic Arab Insurance Company SALAMA
+      2  = Dubai Insurance
+      3  = Sukoon Insurance Company
+      4  = Al Fujairah National Insurance Co P.J.S.C.
+      5  = Watania Takaful General P.J.S.C
+      6  = Abu Dhabi National Insurance Company PJSC (ADNIC)
+      7  = Abu Dhabi National Takaful Co.
+      8  = Qatar Insurance Company
+      9  = Insurance House
+     10  = Yas Takaful P.J.S.C.
+     11  = Al Ain Ahlia Insurance Company
+     12  = Al Dhafra
+     13  = National General Insurance Company
+     14  = Al Wathba National Insurance
+     15  = Orient
+     16  = Ras Al Khaimah National Insurance Company
+     18  = Adamjee Insurance Company LTD
+     19  = United Fidelity Insurance Company- PSC
+     20  = Methaq Takaful Insurance Company
+     21  = Union Insurance Company P.J.S.C
+     22  = Orient Takaful PJSC
+
+    You can also override via Maven:  mvn test -DinsuranceCompanyProfileId=3
+  -->
+  <parameter name="insuranceCompanyProfileId" value="6"/>
+
   <test name="Motor Tests">
     <classes>
       <class name="com.insurance.automation.runners.MotorTestRunner"/>
     </classes>
   </test>
+
 </suite>

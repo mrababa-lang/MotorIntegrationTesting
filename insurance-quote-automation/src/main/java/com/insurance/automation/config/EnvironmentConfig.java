@@ -85,4 +85,12 @@ public interface EnvironmentConfig extends Config {
     @Key("report.output.dir")
     @DefaultValue("target/reports")
     String reportOutputDir();
+
+    /**
+     * @return insurance company profile ID to test.
+     *         Can be overridden by the testng.xml parameter or -DinsuranceCompanyProfileId.
+     */
+    @Key("insurance.company.profile.id")
+    @DefaultValue("6")
+    int insuranceCompanyProfileId();
 }

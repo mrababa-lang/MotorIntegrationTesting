@@ -2,6 +2,8 @@ package com.insurance.automation.runners;
 
 import com.insurance.automation.config.ConfigManager;
 import com.insurance.automation.config.EnvironmentConfig;
+import com.insurance.automation.config.InsuranceCompanyRegistry;
+import com.insurance.automation.config.InsuranceCompanyRegistry.CompanyProfile;
 import com.insurance.automation.report.InsuranceQuoteReportGenerator;
 import io.cucumber.testng.AbstractTestNGCucumberTests;
 import java.time.LocalDateTime;
@@ -9,83 +11,95 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 
 /**
  * Shared Cucumber + TestNG suite lifecycle host.
+ *
+ * <p>The {@code insuranceCompanyProfileId} parameter controls which company is under test.
+ * Set it in {@code testng.xml} or override on the command line:
+ * <pre>mvn test -DinsuranceCompanyProfileId=3</pre>
+ * The Configuration section of the report is populated by config feature scenarios,
+ * not by hardcoded entries here.
  */
 public abstract class TestRunner extends AbstractTestNGCucumberTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestRunner.class);
     private static InsuranceQuoteReportGenerator reporter;
+    private static int activeCompanyProfileId;
 
     /**
-     * Initializes report generator before suite execution.
+     * Initialises the report generator before the suite runs.
+     *
+     * @param companyIdParam insuranceCompanyProfileId from testng.xml (default "6").
+     *                       A command-line -DinsuranceCompanyProfileId takes precedence.
      */
     @BeforeSuite(alwaysRun = true)
-    public void beforeSuite() {
+    @Parameters("insuranceCompanyProfileId")
+    public void beforeSuite(@Optional("6") final String companyIdParam) {
+        // Command-line property wins over testng.xml parameter
+        final String resolved = System.getProperty("insuranceCompanyProfileId", companyIdParam);
+        activeCompanyProfileId = parseCompanyId(resolved, 6);
+
+        final CompanyProfile company = InsuranceCompanyRegistry.get(activeCompanyProfileId);
         final EnvironmentConfig config = ConfigManager.getConfig();
         final String buildId = System.getProperty("buildId", "local-build");
+
         reporter = new InsuranceQuoteReportGenerator(
             InsuranceQuoteReportGenerator.RunInfo.builder()
                 .environment(System.getProperty("env", "uat"))
                 .buildId(buildId)
                 .startedAt(LocalDateTime.now().toString())
                 .baseUrl(config.baseUrl())
+                .insuranceCompanyProfileId(company.getId())
+                .insuranceCompanyName(company.getName())
+                .insuranceCompanyLogo(company.getLogoUrl())
                 .build(),
             config.reportTemplatePath(),
             config.reportOutputDir());
-        addShoryMotorConfigurations();
-        LOG.info("Initialized report generator for build={} env={}", buildId, System.getProperty("env", "uat"));
+
+        LOG.info("Suite started — company={} (id={}) build={} env={}",
+            company.getName(), company.getId(), buildId, System.getProperty("env", "uat"));
     }
 
     /**
-     * Finalizes report after suite execution.
+     * Generates the HTML report after all scenarios have run.
      */
     @AfterSuite(alwaysRun = true)
     public void afterSuite() {
         if (reporter == null) {
-            LOG.error("Reporter was not initialized; skipping generation.");
+            LOG.error("Reporter was not initialised; skipping generation.");
             return;
         }
         final String output = reporter.generate();
         if (output == null) {
-            LOG.error("Report generation skipped due to missing template or write failure.");
+            LOG.error("Report generation failed — check template path and write permissions.");
             return;
         }
-        LOG.info("Report output path: {}", output);
+        LOG.info("Report written to: {}", output);
     }
 
     /**
-     * Returns singleton suite reporter.
-     *
-     * @return report generator instance.
+     * Returns the singleton suite reporter.
      */
     public static InsuranceQuoteReportGenerator getReporter() {
         return reporter;
     }
 
-    private void addShoryMotorConfigurations() {
-        reporter.addConfiguration(configuration("vehicleIdentity_plate", "Plate-Based Lookup (vehicleIdentity=2)", "Vehicle Lookup", "vehicleIdentity=2"));
-        reporter.addConfiguration(configuration("vehicleIdentity_vcc", "VCC-Based Lookup (vehicleIdentity=3)", "Vehicle Lookup", "vehicleIdentity=3"));
-        reporter.addConfiguration(configuration("customLangHeader", "Custom Language Header (AR)", "Request Config", "custom-lang: AR"));
-        reporter.addConfiguration(configuration("quoteOfferPolling", "Quote Offer Polling", "Quote Flow", "max=10, interval=3000ms"));
-        reporter.addConfiguration(configuration("nullLicenseHandling", "Null CustomerLicenseId Handling", "Quote Flow", "omit field if null"));
-        reporter.addConfiguration(configuration("offerFeatureCode_tpl", "Third Party Liability Feature (code=1)", "Offer Features", "code=1"));
-        reporter.addConfiguration(configuration("offerFeatureCode_carRental", "Car Rental Feature (code=3)", "Offer Features", "code=3"));
-        reporter.addConfiguration(configuration("offerFeatureCode_roadside", "Roadside Assistance Feature (code=4)", "Offer Features", "code=4"));
+    /**
+     * Returns the insurance company profile ID active for this suite run.
+     */
+    public static int getActiveCompanyProfileId() {
+        return activeCompanyProfileId;
     }
 
-    private InsuranceQuoteReportGenerator.ConfigurationResult configuration(
-        final String key,
-        final String label,
-        final String category,
-        final String value) {
-        return InsuranceQuoteReportGenerator.ConfigurationResult.builder()
-            .key(key)
-            .label(label)
-            .category(category)
-            .enabled(Boolean.TRUE)
-            .value(value)
-            .build();
+    private static int parseCompanyId(final String value, final int fallback) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            LOG.warn("Invalid insuranceCompanyProfileId '{}'; defaulting to {}", value, fallback);
+            return fallback;
+        }
     }
 }

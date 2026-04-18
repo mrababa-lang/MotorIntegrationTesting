@@ -108,27 +108,38 @@ public class InsuranceQuoteReportGenerator {
     // ── Inner model classes — no Lombok; all constructors and getters are explicit ──
 
     /**
-     * Run metadata model.
+     * Run metadata model — includes insurance company context.
      */
     public static class RunInfo {
         private String environment;
         private String buildId;
         private String startedAt;
         private String baseUrl;
+        private int    insuranceCompanyProfileId;
+        private String insuranceCompanyName;
+        private String insuranceCompanyLogo;
 
         public RunInfo() {}
 
-        public RunInfo(final String environment, final String buildId, final String startedAt, final String baseUrl) {
+        public RunInfo(final String environment, final String buildId, final String startedAt,
+                final String baseUrl, final int insuranceCompanyProfileId,
+                final String insuranceCompanyName, final String insuranceCompanyLogo) {
             this.environment = environment;
             this.buildId = buildId;
             this.startedAt = startedAt;
             this.baseUrl = baseUrl;
+            this.insuranceCompanyProfileId = insuranceCompanyProfileId;
+            this.insuranceCompanyName = insuranceCompanyName;
+            this.insuranceCompanyLogo = insuranceCompanyLogo;
         }
 
-        public String getEnvironment() { return environment; }
-        public String getBuildId()    { return buildId; }
-        public String getStartedAt()  { return startedAt; }
-        public String getBaseUrl()    { return baseUrl; }
+        public String getEnvironment()            { return environment; }
+        public String getBuildId()                { return buildId; }
+        public String getStartedAt()              { return startedAt; }
+        public String getBaseUrl()                { return baseUrl; }
+        public int    getInsuranceCompanyProfileId() { return insuranceCompanyProfileId; }
+        public String getInsuranceCompanyName()   { return insuranceCompanyName; }
+        public String getInsuranceCompanyLogo()   { return insuranceCompanyLogo; }
 
         public static RunInfoBuilder builder() { return new RunInfoBuilder(); }
 
@@ -137,14 +148,21 @@ public class InsuranceQuoteReportGenerator {
             private String buildId;
             private String startedAt;
             private String baseUrl;
+            private int    insuranceCompanyProfileId;
+            private String insuranceCompanyName;
+            private String insuranceCompanyLogo;
 
-            public RunInfoBuilder environment(final String environment) { this.environment = environment; return this; }
-            public RunInfoBuilder buildId(final String buildId)         { this.buildId = buildId;         return this; }
-            public RunInfoBuilder startedAt(final String startedAt)     { this.startedAt = startedAt;     return this; }
-            public RunInfoBuilder baseUrl(final String baseUrl)         { this.baseUrl = baseUrl;         return this; }
+            public RunInfoBuilder environment(final String environment)                         { this.environment = environment;                           return this; }
+            public RunInfoBuilder buildId(final String buildId)                                 { this.buildId = buildId;                                   return this; }
+            public RunInfoBuilder startedAt(final String startedAt)                             { this.startedAt = startedAt;                               return this; }
+            public RunInfoBuilder baseUrl(final String baseUrl)                                 { this.baseUrl = baseUrl;                                   return this; }
+            public RunInfoBuilder insuranceCompanyProfileId(final int id)                       { this.insuranceCompanyProfileId = id;                      return this; }
+            public RunInfoBuilder insuranceCompanyName(final String insuranceCompanyName)       { this.insuranceCompanyName = insuranceCompanyName;         return this; }
+            public RunInfoBuilder insuranceCompanyLogo(final String insuranceCompanyLogo)       { this.insuranceCompanyLogo = insuranceCompanyLogo;         return this; }
 
             public RunInfo build() {
-                return new RunInfo(environment, buildId, startedAt, baseUrl);
+                return new RunInfo(environment, buildId, startedAt, baseUrl,
+                        insuranceCompanyProfileId, insuranceCompanyName, insuranceCompanyLogo);
             }
         }
     }

@@ -10,11 +10,16 @@
 
     /* ── Header ─────────────────────────────────────────── */
     .header { background: linear-gradient(135deg, #1F4E79, #2E75B6); color: #fff; padding: 24px 32px; }
-    .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .header-title h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
     .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 4px; }
     .run-meta { display: flex; gap: 32px; margin-top: 16px; flex-wrap: wrap; }
     .run-meta span { font-size: 12px; opacity: 0.85; }
     .run-meta strong { opacity: 1; color: #fff; }
+    /* ── Company badge ───────────────────────────────────── */
+    .company-badge { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; padding: 10px 16px; backdrop-filter: blur(4px); }
+    .company-badge img { height: 44px; width: auto; max-width: 120px; object-fit: contain; background: #fff; border-radius: 6px; padding: 4px 8px; }
+    .company-badge span { font-size: 13px; font-weight: 600; color: #fff; max-width: 220px; line-height: 1.3; }
 
     /* ── Summary bar ──────────────────────────────────────── */
     .summary { display: flex; gap: 12px; padding: 16px 32px; background: #fff; border-bottom: 1px solid #dde3ec; flex-wrap: wrap; }
@@ -101,12 +106,21 @@
 <body>
 
 <div class="header">
-  <h1>Insurance Quote Automation Report</h1>
-  <div class="subtitle" id="hdr-url"></div>
+  <div class="header-top">
+    <div class="header-title">
+      <h1>Insurance Quote Automation Report</h1>
+      <div class="subtitle" id="hdr-url"></div>
+    </div>
+    <div class="company-badge" id="company-badge" style="display:none">
+      <img id="company-logo" src="" alt="" />
+      <span id="company-name"></span>
+    </div>
+  </div>
   <div class="run-meta">
     <span>Environment: <strong id="hdr-env"></strong></span>
     <span>Build: <strong id="hdr-build"></strong></span>
     <span>Started: <strong id="hdr-date"></strong></span>
+    <span id="hdr-company-meta" style="display:none">Company ID: <strong id="hdr-company-id"></strong></span>
   </div>
   <div class="progress-wrap" id="progress-bar"></div>
 </div>
@@ -183,6 +197,23 @@
     document.getElementById('hdr-env').textContent   = (runInfo.environment   || '').toUpperCase();
     document.getElementById('hdr-build').textContent = runInfo.buildId         || '';
     document.getElementById('hdr-date').textContent  = fmtDate(runInfo.startedAt);
+
+    // Insurance company badge
+    if (runInfo.insuranceCompanyName) {
+      var badge = document.getElementById('company-badge');
+      badge.style.display = 'flex';
+      var logo = document.getElementById('company-logo');
+      if (runInfo.insuranceCompanyLogo) {
+        logo.src = runInfo.insuranceCompanyLogo;
+        logo.alt = runInfo.insuranceCompanyName;
+      } else {
+        logo.style.display = 'none';
+      }
+      document.getElementById('company-name').textContent = runInfo.insuranceCompanyName;
+      var meta = document.getElementById('hdr-company-meta');
+      meta.style.display = '';
+      document.getElementById('hdr-company-id').textContent = runInfo.insuranceCompanyProfileId;
+    }
 
     var pass  = results.filter(function(r){ return r.status === 'PASS'; }).length;
     var fail  = results.filter(function(r){ return r.status === 'FAIL'; }).length;

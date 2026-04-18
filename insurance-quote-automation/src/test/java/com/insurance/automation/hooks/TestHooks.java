@@ -1,10 +1,6 @@
 package com.insurance.automation.hooks;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insurance.automation.context.ScenarioContext;
-import com.insurance.automation.models.request.QuoteRequest;
-import com.insurance.automation.models.response.QuoteResponse;
 import com.insurance.automation.report.InsuranceQuoteReportGenerator;
 import com.insurance.automation.runners.TestRunner;
 import io.cucumber.java.After;
@@ -12,8 +8,8 @@ import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 import io.cucumber.java.Status;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +21,6 @@ public class TestHooks {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestHooks.class);
     private final ScenarioContext scenarioContext;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Creates hook class with scenario context injection.
@@ -37,7 +32,7 @@ public class TestHooks {
     }
 
     /**
-     * Runs before each scenario.
+     * Runs before each scenario — resets all per-scenario state.
      *
      * @param scenario current cucumber scenario.
      */
@@ -45,46 +40,51 @@ public class TestHooks {
     public void beforeScenario(final Scenario scenario) {
         scenarioContext.setCurrentScenarioName(scenario.getName());
         scenarioContext.setCurrentScenarioId(extractScenarioId(scenario));
-        scenarioContext.setCurrentRequest(null);
-        scenarioContext.setLastQuoteResponse(null);
-        scenarioContext.setLastConfigResponse(null);
+
+        // Reset HTTP state
         scenarioContext.setLastResponseTimeMs(0L);
         scenarioContext.setLastHttpStatus(0);
-        scenarioContext.setLastExpectedStatement(null);
         scenarioContext.setRawLastResponse(null);
         scenarioContext.setLastApiResponse(null);
+
+        // Reset request capture
+        scenarioContext.setLastRequestBodyJson(null);
+
+        // Reset step / config capture
+        scenarioContext.clearStepLog();
+        scenarioContext.clearCapturedConfigValues();
+
+        // Reset flow IDs
         scenarioContext.setVehicleId(null);
         scenarioContext.setCustomerId(null);
         scenarioContext.setCustomerLicenseId(null);
         scenarioContext.setQuoteRequestId(null);
         scenarioContext.setOfferIds(new ArrayList<>());
+
         LOG.info("Starting scenario '{}' on env '{}'", scenario.getName(), System.getProperty("env", "uat"));
     }
 
     /**
-     * Runs after each scenario and appends a report result.
+     * Runs after each scenario and appends a result to the HTML report.
      *
      * @param scenario completed cucumber scenario.
      */
     @After
     public void afterScenario(final Scenario scenario) {
         final InsuranceQuoteReportGenerator reporter = TestRunner.getReporter();
-        final QuoteResponse quoteResponse = scenarioContext.getLastQuoteResponse();
 
-        String mappedStatus;
-        Boolean match;
+        // ── Map Cucumber status to report status ──────────────────────────
+        final String mappedStatus;
+        final Boolean match;
         String error = null;
 
-        if (scenario.getStatus() == Status.PASSED && quoteResponse != null && "skipped".equalsIgnoreCase(quoteResponse.getStatus())) {
-            mappedStatus = "SKIP";
-            match = Boolean.TRUE;
-        } else if (scenario.getStatus() == Status.PASSED) {
+        if (scenario.getStatus() == Status.PASSED) {
             mappedStatus = "PASS";
             match = Boolean.TRUE;
         } else if (scenario.getStatus() == Status.FAILED) {
             mappedStatus = "FAIL";
             match = Boolean.FALSE;
-            error = scenario.isFailed() ? "Scenario failed" : null;
+            error = "Scenario failed — see actual response for details";
         } else {
             mappedStatus = "PENDING";
             match = null;
@@ -97,15 +97,17 @@ public class TestHooks {
             .category(resolveCategory(scenario))
             .status(mappedStatus)
             .duration(scenarioContext.getLastResponseTimeMs())
-            .input(serializeInput(scenarioContext.getCurrentRequest()))
-            .expected(Optional.ofNullable(scenarioContext.getLastExpectedStatement()).orElse("See scenario steps"))
-            .actual(resolveActual())
+            .input(scenarioContext.getLastRequestBodyJson())
+            .expected(resolveExpected())
+            .actual(scenarioContext.getRawLastResponse())
             .match(match)
-            .skipRules(resolveSkipRules(quoteResponse))
-            .configValues(resolveConfigValues(quoteResponse))
+            .skipRules(new ArrayList<>())
+            .configValues(resolveConfigValues())
             .error(error)
             .build());
     }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private String extractScenarioId(final Scenario scenario) {
         return scenario.getSourceTagNames().stream()
@@ -116,77 +118,44 @@ public class TestHooks {
     }
 
     private String resolveCategory(final Scenario scenario) {
-        final String lowered = scenario.getName().toLowerCase();
-        if (lowered.contains("skip")) {
-            return "skip-rule";
-        }
-        if (lowered.contains("configuration") || lowered.contains("config")) {
+        if (scenario.getSourceTagNames().contains("@config-test")) {
             return "configuration";
         }
+        final String name = scenario.getName().toLowerCase();
+        if (name.contains("skip")) return "skip-rule";
+        if (name.contains("config")) return "configuration";
         return "quote";
     }
 
-    private String serializeInput(final QuoteRequest request) {
-        if (request == null) {
-            return null;
+    /**
+     * Builds the "Expected" text from the step log accumulated during the scenario.
+     * If no steps were logged the scenario name is used as a fallback.
+     */
+    private String resolveExpected() {
+        final List<String> steps = scenarioContext.getStepLog();
+        if (steps == null || steps.isEmpty()) {
+            return scenarioContext.getCurrentScenarioName() != null
+                ? scenarioContext.getCurrentScenarioName()
+                : "See scenario steps";
         }
-        try {
-            return objectMapper.writeValueAsString(request);
-        } catch (JsonProcessingException exception) {
-            return "{}";
-        }
+        return String.join("\n", steps);
     }
 
-    private String resolveActual() {
-        if (scenarioContext.getLastQuoteResponse() != null) {
-            final QuoteResponse response = scenarioContext.getLastQuoteResponse();
-            if (response.getPremium() != null && response.getPremium().getMonthly() != null) {
-                return "monthly=" + response.getPremium().getMonthly();
-            }
-            return Optional.ofNullable(response.getMessage()).orElse(scenarioContext.getRawLastResponse());
+    /**
+     * Converts the key-value pairs captured during the scenario into the report model.
+     */
+    private List<InsuranceQuoteReportGenerator.ConfigValue> resolveConfigValues() {
+        final Map<String, String> map = scenarioContext.getCapturedConfigValues();
+        if (map == null || map.isEmpty()) {
+            return new ArrayList<>();
         }
-        if (scenarioContext.getLastConfigResponse() != null) {
-            return "configValue=" + scenarioContext.getLastConfigResponse().getValue();
-        }
-        return scenarioContext.getRawLastResponse();
-    }
-
-    private List<InsuranceQuoteReportGenerator.SkipRule> resolveSkipRules(final QuoteResponse response) {
-        if (response == null) {
-            return Collections.emptyList();
-        }
-        final List<String> codes = new ArrayList<>();
-        if (response.getSkipReason() != null) {
-            codes.add(response.getSkipReason());
-        }
-        if (response.getSkipReasons() != null) {
-            codes.addAll(response.getSkipReasons());
-        }
-        final List<InsuranceQuoteReportGenerator.SkipRule> skipRules = new ArrayList<>();
-        for (final String code : codes) {
-            skipRules.add(InsuranceQuoteReportGenerator.SkipRule.builder()
-                .code(code)
-                .message("Rule triggered: " + code)
+        final List<InsuranceQuoteReportGenerator.ConfigValue> list = new ArrayList<>();
+        for (final Map.Entry<String, String> entry : map.entrySet()) {
+            list.add(InsuranceQuoteReportGenerator.ConfigValue.builder()
+                .key(entry.getKey())
+                .value(entry.getValue())
                 .build());
         }
-        return skipRules;
+        return list;
     }
-
-    private List<InsuranceQuoteReportGenerator.ConfigValue> resolveConfigValues(final QuoteResponse response) {
-        if (response == null) {
-            return Collections.emptyList();
-        }
-        final List<InsuranceQuoteReportGenerator.ConfigValue> configValues = new ArrayList<>();
-        if (response.getRatingFactor() != null) {
-            configValues.add(InsuranceQuoteReportGenerator.ConfigValue.builder().key("ratingFactor").value(response.getRatingFactor()).build());
-        }
-        if (response.getBaseRate() != null) {
-            configValues.add(InsuranceQuoteReportGenerator.ConfigValue.builder().key("baseRate").value(response.getBaseRate().toPlainString()).build());
-        }
-        if (response.getDiscounts() != null) {
-            configValues.add(InsuranceQuoteReportGenerator.ConfigValue.builder().key("discounts").value(String.join(",", response.getDiscounts())).build());
-        }
-        return configValues;
-    }
-
 }
