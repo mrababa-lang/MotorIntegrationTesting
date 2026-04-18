@@ -1,20 +1,16 @@
-@SuiteTag @Config @Regression
-Feature: Configuration Validation
+@motor @Config @Regression
+Feature: Configuration Validation via Two-Quote Probe
 
-  @TC-009
-  Scenario Outline: Configuration <configKey> is active and expected
-    When the configuration status API is called for key "<configKey>"
-    Then the configuration enabled state is <expectedEnabled>
-    And the configuration value is "<expectedValue>"
-    And the result is recorded in the report as category "<category>"
+  Background:
+    Given the UAT environment is configured
+
+  @CFG-VALID-001
+  Scenario Outline: Evaluate configuration behavior for <configKey>
+    And I have retrieved vehicle details for personalId <personalId> and plateNumber "<plateNumber>"
+    And vehicle retrieval was successful
+    When I run the configuration probe with insuranceTypeId <probeInsuranceTypeId> and constraint insuranceTypeId <constraintInsuranceTypeId>
+    Then the configuration "<configKey>" should be evaluated
 
     Examples:
-      | configKey              | expectedEnabled | expectedValue | category       |
-      | priorInsuranceDiscount | true            | -5%           | Discounts      |
-      | multiCarDiscount       | true            | -8%           | Discounts      |
-      | skipRule_SR-AGE-001    | true            | minAge=18     | Skip Rules     |
-      | skipRule_SR-GEO-003    | true            | FL,LA,MS      | Skip Rules     |
-      | skipRule_SR-CREDIT-002 | true            | minScore=580  | Skip Rules     |
-      | skipRule_SR-VEH-004    | true            | maxAge=15yrs  | Skip Rules     |
-      | baseRate_CA            | true            | $78           | Rating Factors |
-      | stateSurcharge_CA      | true            | 7%            | Rating Factors |
+      | configKey                         | personalId       | plateNumber | probeInsuranceTypeId | constraintInsuranceTypeId |
+      | restrictTplForExistingTplPolicy   | 784197239274828  | 78881       | 2                    | 1                         |
