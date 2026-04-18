@@ -1,27 +1,23 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="Insurance Quote Automation" parallel="none">
   <test name="Quote Tests">
-    <parameter name="cucumber.filter.tags" value="@Quote"/>
     <classes>
-      <class name="com.insurance.automation.runners.TestRunner"/>
+      <class name="com.insurance.automation.runners.QuoteTestRunner"/>
     </classes>
   </test>
   <test name="Skip Rule Tests">
-    <parameter name="cucumber.filter.tags" value="@SkipRule"/>
     <classes>
-      <class name="com.insurance.automation.runners.TestRunner"/>
+      <class name="com.insurance.automation.runners.SkipRuleTestRunner"/>
     </classes>
   </test>
   <test name="Config Tests">
-    <parameter name="cucumber.filter.tags" value="@Config"/>
     <classes>
-      <class name="com.insurance.automation.runners.TestRunner"/>
+      <class name="com.insurance.automation.runners.ConfigTestRunner"/>
     </classes>
   </test>
   <test name="Motor Tests">
-    <parameter name="cucumber.filter.tags" value="@motor"/>
     <classes>
-      <class name="com.insurance.automation.runners.TestRunner"/>
+      <class name="com.insurance.automation.runners.MotorTestRunner"/>
     </classes>
   </test>
 </suite>

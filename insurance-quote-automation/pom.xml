@@ -25,7 +25,6 @@
         <maven.surefire.version>3.2.5</maven.surefire.version>
 
         <env.name>uat</env.name>
-        <base.url>https://uat-api.insurance.com</base.url>
         <buildId>local-build</buildId>
     </properties>
 
@@ -130,14 +129,12 @@
             </activation>
             <properties>
                 <env.name>uat</env.name>
-                <base.url>https://uat-api.insurance.com</base.url>
             </properties>
         </profile>
         <profile>
             <id>sit</id>
             <properties>
                 <env.name>sit</env.name>
-                <base.url>https://sit-api.insurance.com</base.url>
             </properties>
         </profile>
     </profiles>

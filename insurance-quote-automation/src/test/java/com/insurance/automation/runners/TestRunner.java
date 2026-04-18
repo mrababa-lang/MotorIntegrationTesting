@@ -4,7 +4,6 @@ import com.insurance.automation.config.ConfigManager;
 import com.insurance.automation.config.EnvironmentConfig;
 import com.insurance.automation.report.InsuranceQuoteReportGenerator;
 import io.cucumber.testng.AbstractTestNGCucumberTests;
-import io.cucumber.testng.CucumberOptions;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,20 +11,9 @@ import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 
 /**
- * Cucumber + TestNG runner and suite lifecycle host.
+ * Shared Cucumber + TestNG suite lifecycle host.
  */
-@CucumberOptions(
-    features = "src/test/resources/features",
-    glue = {"com.insurance.automation.stepdefs", "com.insurance.automation.hooks"},
-    tags = "@Regression",
-    plugin = {
-        "pretty",
-        "html:target/cucumber-reports/report.html",
-        "json:target/cucumber-reports/report.json"
-    },
-    monochrome = true
-)
-public class TestRunner extends AbstractTestNGCucumberTests {
+public abstract class TestRunner extends AbstractTestNGCucumberTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestRunner.class);
     private static InsuranceQuoteReportGenerator reporter;
