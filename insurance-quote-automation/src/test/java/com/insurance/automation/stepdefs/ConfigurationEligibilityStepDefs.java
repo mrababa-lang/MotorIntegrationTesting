@@ -2,6 +2,7 @@ package com.insurance.automation.stepdefs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.insurance.automation.api.BaseApiClient;
 import com.insurance.automation.api.QuoteApiClient;
 import com.insurance.automation.api.ShoryEndpoints;
 import com.insurance.automation.context.ScenarioContext;
@@ -18,13 +19,12 @@ import java.util.Map;
 /**
  * Step definitions implementing the two-quote configuration eligibility test pattern.
  */
-public class ConfigurationEligibilityStepDefs extends MotorFlowStepDefs {
+public class ConfigurationEligibilityStepDefs extends BaseApiClient {
 
     private final ScenarioContext context;
     private final ConfigurationTestHelper configHelper;
 
     public ConfigurationEligibilityStepDefs(final ScenarioContext context) {
-        super(context);
         this.context = context;
         this.configHelper = new ConfigurationTestHelper(new QuoteApiClient(), context);
     }
