@@ -18,12 +18,35 @@ public class BaseApiClient {
     }
 
     protected RequestSpecification buildSpec() {
-        return RestAssured.given()
-            .baseUri(config.baseUrl())
-            .auth().oauth2(config.authToken())
+        RequestSpecification specification = RestAssured.given()
+            .baseUri(config.baseUrl());
+
+        final String apiBasePath = trimToNull(config.apiBasePath());
+        if (apiBasePath != null) {
+            specification = specification.basePath(apiBasePath);
+        }
+
+        final String authToken = trimToNull(config.authToken());
+        if (authToken != null && !looksLikeUnresolvedPlaceholder(authToken)) {
+            specification = specification.auth().oauth2(authToken);
+        }
+
+        return specification
             .header("custom-lang", config.defaultHeaderCustomLang())
             .header("clientplatform", "3")
             .contentType(ContentType.JSON)
             .accept(ContentType.JSON);
+    }
+
+    private static String trimToNull(final String value) {
+        if (value == null) {
+            return null;
+        }
+        final String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static boolean looksLikeUnresolvedPlaceholder(final String value) {
+        return value.startsWith("${") && value.endsWith("}");
     }
 }
