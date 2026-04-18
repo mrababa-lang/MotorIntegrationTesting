@@ -42,6 +42,11 @@ public interface EnvironmentConfig extends Config {
     @DefaultValue("AR")
     String defaultHeaderCustomLang();
 
+    /** @return common API base path appended after the base URL. */
+    @Key("api.base.path")
+    @DefaultValue("/api")
+    String apiBasePath();
+
     /** @return plate identity code. */
     @Key("vehicle.identity.plate")
     @DefaultValue("2")
