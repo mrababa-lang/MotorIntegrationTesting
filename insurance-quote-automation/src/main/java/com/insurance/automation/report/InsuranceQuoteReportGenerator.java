@@ -118,6 +118,14 @@ public class InsuranceQuoteReportGenerator {
         private String buildId;
         private String startedAt;
         private String baseUrl;
+
+        public String getEnvironment() {
+            return environment;
+        }
+
+        public String getBuildId() {
+            return buildId;
+        }
     }
 
     /**

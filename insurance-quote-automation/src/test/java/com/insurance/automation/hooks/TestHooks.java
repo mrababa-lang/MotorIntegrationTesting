@@ -11,8 +11,6 @@ import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 import io.cucumber.java.Status;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -86,7 +84,7 @@ public class TestHooks {
         } else if (scenario.getStatus() == Status.FAILED) {
             mappedStatus = "FAIL";
             match = Boolean.FALSE;
-            error = scenario.isFailed() && scenario.getError() != null ? toStackTrace(scenario.getError()) : "Scenario failed";
+            error = scenario.isFailed() ? "Scenario failed" : null;
         } else {
             mappedStatus = "PENDING";
             match = null;
@@ -191,9 +189,4 @@ public class TestHooks {
         return configValues;
     }
 
-    private String toStackTrace(final Throwable throwable) {
-        final StringWriter sw = new StringWriter();
-        throwable.printStackTrace(new PrintWriter(sw));
-        return sw.toString();
-    }
 }
