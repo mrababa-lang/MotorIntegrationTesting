@@ -44,6 +44,16 @@ public class QuoteApiClient {
      * @return mapped quote response.
      */
     public QuoteResponse getQuote(final QuoteRequest request) {
+        return requestQuote(request).as(QuoteResponse.class);
+    }
+
+    /**
+     * Posts a quote request and returns the raw REST Assured response.
+     *
+     * @param request quote request payload.
+     * @return raw response.
+     */
+    public Response requestQuote(final Object request) {
         final Response response = RestAssured.given(requestSpecification)
             .body(request)
             .post();
@@ -53,7 +63,7 @@ public class QuoteApiClient {
         lastRawResponse = response.asString();
 
         LOG.info("Quote API call completed with status={} and duration={}ms", lastHttpStatusCode, lastResponseTime);
-        return response.as(QuoteResponse.class);
+        return response;
     }
 
     /**
