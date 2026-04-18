@@ -64,6 +64,7 @@
     .badge-PENDING { background: #EEF2F8; color: #555; }
     .badge-enabled      { background: #E8F5E9; color: #2E7D32; }
     .badge-disabled     { background: #FFEBEE; color: #C62828; }
+    .badge-data-issue   { background: #FFF3E0; color: #E65100; }
     .badge-pending-cfg  { background: #F3F3F3; color: #777; }
     .badge-quote         { background: #E3F2FD; color: #1565C0; }
     .badge-configuration { background: #F3E5F5; color: #6A1B9A; }
@@ -92,6 +93,14 @@
     .config-card .card-label { font-size: 12px; font-weight: 700; color: #222; margin-bottom: 4px; }
     .config-card .card-value { font-size: 11px; color: #555; font-family: monospace; background: #EEF2F8; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
     .config-card .card-status { margin-top: 6px; }
+
+    /* ── Config summary pills ───────────────────────────── */
+    .cfg-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .cfg-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .cfg-pill .pill-icon { font-size: 13px; }
+    .cfg-pill.pill-config { background: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
+    .cfg-pill.pill-skip   { background: #FFF8E1; color: #E65100; border: 1px solid #FFCC80; }
+    .cfg-pill.pill-issue  { background: #FFF3E0; color: #BF360C; border: 1px solid #FFCC80; }
 
     /* ── Empty state ─────────────────────────────────────── */
     .empty { text-align: center; padding: 40px; color: #888; font-size: 13px; }
@@ -142,24 +151,23 @@
 
 <div class="toolbar">
   <input class="search" id="searchBox" type="text"
-         placeholder="Search by name, ID, category…" oninput="applyFilters()" />
-  <div class="filter-group">
-    <button class="filter-btn active" onclick="filterCat('ALL', this)">All Categories</button>
-    <button class="filter-btn" onclick="filterCat('quote', this)">Quote</button>
-    <button class="filter-btn" onclick="filterCat('configuration', this)">Configuration</button>
-    <button class="filter-btn" onclick="filterCat('skip-rule', this)">Skip Rule</button>
-  </div>
+         placeholder="Search by scenario name or ID…" oninput="applyFilters()" />
 </div>
 
 <div class="main">
-  <div class="section-title">Scenario Results</div>
+  <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin:24px 0 0;">
+    <div class="section-title" style="margin:0">Current Configurations</div>
+    <div class="cfg-summary" id="cfgSummary"></div>
+  </div>
+  <div id="configsContainer" style="margin-top:10px"></div>
+
+  <div class="section-title" style="margin-top:32px">Scenario Results</div>
   <table class="results-table" id="resultsTable">
     <thead>
       <tr>
         <th style="width:28px"></th>
         <th style="width:80px">ID</th>
         <th>Scenario Name</th>
-        <th style="width:110px">Category</th>
         <th style="width:80px">Status</th>
         <th style="width:90px">Duration</th>
         <th style="width:70px">Match</th>
@@ -168,9 +176,6 @@
     <tbody id="resultsBody"></tbody>
   </table>
   <div id="noResults" class="empty" style="display:none">No results match the current filter.</div>
-
-  <div class="section-title">Current Configurations</div>
-  <div id="configsContainer"></div>
 </div>
 
 <script>
@@ -181,14 +186,22 @@
 
   // ── State ───────────────────────────────────────────────────────
   let activeStatus = 'ALL';
-  let activeCat    = 'ALL';
+
+  // Categories excluded from the Scenario Results table — they appear only in Configurations
+  const CONFIG_CATEGORIES = ['skip-rule', 'configuration'];
+
+  // Quote-only results (what the Scenario Results table shows)
+  const quoteResults = results.filter(function(r) {
+    return CONFIG_CATEGORIES.indexOf((r.category || 'quote').toLowerCase()) === -1;
+  });
 
   // ── Boot ────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     renderHeader();
     renderSummary();
-    renderResults(results);
+    renderConfigSummary(configs);
     renderConfigs(configs);
+    renderResults(quoteResults);
   });
 
   // ── Header ──────────────────────────────────────────────────────
@@ -215,10 +228,10 @@
       document.getElementById('hdr-company-id').textContent = runInfo.insuranceCompanyProfileId;
     }
 
-    var pass  = results.filter(function(r){ return r.status === 'PASS'; }).length;
-    var fail  = results.filter(function(r){ return r.status === 'FAIL'; }).length;
-    var skip  = results.filter(function(r){ return r.status === 'SKIP' || r.status === 'PENDING'; }).length;
-    var total = results.length || 1;
+    var pass  = quoteResults.filter(function(r){ return r.status === 'PASS'; }).length;
+    var fail  = quoteResults.filter(function(r){ return r.status === 'FAIL'; }).length;
+    var skip  = quoteResults.filter(function(r){ return r.status === 'SKIP' || r.status === 'PENDING'; }).length;
+    var total = quoteResults.length || 1;
     var bar   = document.getElementById('progress-bar');
     bar.innerHTML =
       '<div class="progress-pass" style="width:' + (pass/total*100).toFixed(1) + '%"></div>' +
@@ -228,10 +241,10 @@
 
   // ── Summary ─────────────────────────────────────────────────────
   function renderSummary() {
-    document.getElementById('cnt-all').textContent  = results.length;
-    document.getElementById('cnt-pass').textContent = results.filter(function(r){ return r.status === 'PASS'; }).length;
-    document.getElementById('cnt-fail').textContent = results.filter(function(r){ return r.status === 'FAIL'; }).length;
-    document.getElementById('cnt-skip').textContent = results.filter(function(r){ return r.status === 'SKIP' || r.status === 'PENDING'; }).length;
+    document.getElementById('cnt-all').textContent  = quoteResults.length;
+    document.getElementById('cnt-pass').textContent = quoteResults.filter(function(r){ return r.status === 'PASS'; }).length;
+    document.getElementById('cnt-fail').textContent = quoteResults.filter(function(r){ return r.status === 'FAIL'; }).length;
+    document.getElementById('cnt-skip').textContent = quoteResults.filter(function(r){ return r.status === 'SKIP' || r.status === 'PENDING'; }).length;
   }
 
   // ── Results table ────────────────────────────────────────────────
@@ -248,15 +261,13 @@
       // Main row
       var tr = document.createElement('tr');
       tr.className = 'result-row';
-      tr.dataset.status   = r.status   || 'PENDING';
-      tr.dataset.category = r.category || 'quote';
-      tr.dataset.name     = ((r.name || '') + ' ' + (r.id || '') + ' ' + (r.description || '')).toLowerCase();
+      tr.dataset.status = r.status || 'PENDING';
+      tr.dataset.name   = ((r.name || '') + ' ' + (r.id || '') + ' ' + (r.description || '')).toLowerCase();
       tr.onclick = function(){ toggleDetail(i); };
       tr.innerHTML =
         '<td><span class="arrow" id="arrow-' + i + '">&#9658;</span></td>' +
         '<td><code style="font-size:11px">' + esc(r.id || 'TC-NA') + '</code></td>' +
         '<td>' + esc(r.name || '') + '</td>' +
-        '<td><span class="badge badge-' + (r.category || 'quote') + '">' + esc(r.category || 'quote') + '</span></td>' +
         '<td><span class="badge badge-' + (r.status || 'PENDING') + '">' + esc(r.status || 'PENDING') + '</span></td>' +
         '<td>' + (r.duration ? r.duration + ' ms' : '&mdash;') + '</td>' +
         '<td>' + (r.match === true ? '&#9989;' : r.match === false ? '&#10060;' : '&mdash;') + '</td>';
@@ -266,7 +277,7 @@
       detailTr.className = 'detail-row hidden';
       detailTr.id = 'detail-' + i;
       var detailTd = document.createElement('td');
-      detailTd.setAttribute('colspan', '7');
+      detailTd.setAttribute('colspan', '6');
       detailTd.innerHTML = buildDetailPanel(r);
       detailTr.appendChild(detailTd);
 
@@ -322,6 +333,56 @@
     arrow.classList.toggle('open', isHidden);
   }
 
+  // ── Configuration summary pills ──────────────────────────────────
+  function renderConfigSummary(data) {
+    var el = document.getElementById('cfgSummary');
+    if (!data || data.length === 0) { el.innerHTML = ''; return; }
+
+    // Normalise category strings for comparison
+    var isConfigParam = function(c) {
+      var cat = (c.category || '').toLowerCase();
+      return cat === 'configuration parameters' || cat === 'configuration';
+    };
+    var isSkipRule = function(c) {
+      var cat = (c.category || '').toLowerCase();
+      return cat === 'skip rules' || cat === 'skip-rule' || cat === 'skip rule';
+    };
+
+    var cfgItems   = data.filter(isConfigParam);
+    var skipItems  = data.filter(isSkipRule);
+    var cfgEnabled = cfgItems.filter(function(c){ return (c.value || '').toUpperCase() === 'ENABLED'; }).length;
+    var skipEnabled= skipItems.filter(function(c){ return (c.value || '').toUpperCase() === 'ENABLED'; }).length;
+    var dataIssues = data.filter(function(c){ return (c.value || '').toUpperCase() === 'DATA_ISSUE'; }).length;
+
+    var html = '';
+
+    if (cfgItems.length > 0) {
+      html +=
+        '<span class="cfg-pill pill-config">' +
+          '<span class="pill-icon">&#9881;</span>' +
+          'Config params enabled: <strong>' + cfgEnabled + ' of ' + cfgItems.length + '</strong>' +
+        '</span>';
+    }
+
+    if (skipItems.length > 0) {
+      html +=
+        '<span class="cfg-pill pill-skip">' +
+          '<span class="pill-icon">&#9654;</span>' +
+          'Skip rules enabled: <strong>' + skipEnabled + ' of ' + skipItems.length + '</strong>' +
+        '</span>';
+    }
+
+    if (dataIssues > 0) {
+      html +=
+        '<span class="cfg-pill pill-issue">' +
+          '<span class="pill-icon">&#9888;</span>' +
+          'Unable to test (missing data): <strong>' + dataIssues + '</strong>' +
+        '</span>';
+    }
+
+    el.innerHTML = html;
+  }
+
   // ── Configuration cards ──────────────────────────────────────────
   function renderConfigs(data) {
     var container = document.getElementById('configsContainer');
@@ -352,28 +413,34 @@
   }
 
   function configCard(c) {
+    var outcome = (c.value || '').toUpperCase();
     var badge, borderColor;
-    if (c.enabled === true) {
-      badge       = '<span class="badge badge-enabled">Enabled</span>';
+    if (outcome === 'ENABLED') {
+      badge       = '<span class="badge badge-enabled">&#10003; Enabled</span>';
+      borderColor = '#C8E6C9';
+    } else if (outcome === 'DISABLED') {
+      badge       = '<span class="badge badge-disabled">&#10007; Disabled</span>';
+      borderColor = '#FFCDD2';
+    } else if (outcome === 'DATA_ISSUE') {
+      badge       = '<span class="badge badge-data-issue">&#9888; Data Issue</span>';
+      borderColor = '#FFE0B2';
+    } else if (c.enabled === true) {
+      badge       = '<span class="badge badge-enabled">&#10003; Enabled</span>';
       borderColor = '#C8E6C9';
     } else if (c.enabled === false) {
-      badge       = '<span class="badge badge-disabled">Disabled</span>';
+      badge       = '<span class="badge badge-disabled">&#10007; Disabled</span>';
       borderColor = '#FFCDD2';
     } else {
       badge       = '<span class="badge badge-pending-cfg">Pending</span>';
       borderColor = '#E0E0E0';
     }
     var updated = c.lastUpdated
-      ? '<div style="font-size:10px;color:#aaa;margin-top:6px">Updated: ' + esc(c.lastUpdated) + '</div>'
-      : '';
-    var desc = c.description
-      ? '<div style="font-size:11px;color:#666;margin-top:6px">' + esc(c.description) + '</div>'
+      ? '<div style="font-size:10px;color:#aaa;margin-top:6px">Tested: ' + esc(fmtDate(c.lastUpdated)) + '</div>'
       : '';
     return '<div class="config-card" style="border-color:' + borderColor + '">' +
       '<div class="card-label">' + esc(c.label || c.key) + '</div>' +
-      '<div class="card-value">' + esc(c.value || '&mdash;') + '</div>' +
       '<div class="card-status">' + badge + '</div>' +
-      desc + updated +
+      updated +
       '</div>';
   }
 
@@ -394,13 +461,6 @@
     applyFilters();
   }
 
-  function filterCat(cat, btn) {
-    activeCat = cat;
-    document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    applyFilters();
-  }
-
   function applyFilters() {
     var query = (document.getElementById('searchBox').value || '').toLowerCase();
     var visible = 0;
@@ -409,9 +469,8 @@
       var statusOk = activeStatus === 'ALL'
         || row.dataset.status === activeStatus
         || (activeStatus === 'SKIP' && (row.dataset.status === 'SKIP' || row.dataset.status === 'PENDING'));
-      var catOk    = activeCat === 'ALL' || row.dataset.category === activeCat;
       var searchOk = !query || (row.dataset.name || '').includes(query);
-      var show = statusOk && catOk && searchOk;
+      var show = statusOk && searchOk;
       row.style.display = show ? '' : 'none';
       var detail = document.getElementById('detail-' + i);
       if (detail && !show) detail.classList.add('hidden');

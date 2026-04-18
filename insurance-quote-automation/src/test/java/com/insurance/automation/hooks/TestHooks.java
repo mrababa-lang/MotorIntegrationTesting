@@ -118,12 +118,13 @@ public class TestHooks {
     }
 
     private String resolveCategory(final Scenario scenario) {
+        // Check explicit tags first — most reliable
+        if (scenario.getSourceTagNames().contains("@skip-rule")) {
+            return "skip-rule";
+        }
         if (scenario.getSourceTagNames().contains("@config-test")) {
             return "configuration";
         }
-        final String name = scenario.getName().toLowerCase();
-        if (name.contains("skip")) return "skip-rule";
-        if (name.contains("config")) return "configuration";
         return "quote";
     }
 
