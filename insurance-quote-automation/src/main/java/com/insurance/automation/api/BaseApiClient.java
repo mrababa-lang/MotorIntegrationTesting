@@ -22,6 +22,7 @@ public class BaseApiClient {
             .baseUri(config.baseUrl())
             .auth().oauth2(config.authToken())
             .header("custom-lang", config.defaultHeaderCustomLang())
+            .header("clientplatform", "3")
             .contentType(ContentType.JSON)
             .accept(ContentType.JSON);
     }
